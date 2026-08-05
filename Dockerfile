@@ -20,6 +20,8 @@ RUN apk add --no-cache \
     libxml2-dev \
     icu-dev \
     mysql-client \
+    postgresql-client \
+    libpq-dev \
     bash
 
 # PHP extensions
@@ -27,6 +29,8 @@ RUN docker-php-ext-configure gd --with-jpeg --with-webp \
     && docker-php-ext-install \
         pdo \
         pdo_mysql \
+        pdo_pgsql \
+        pgsql \
         mbstring \
         exif \
         pcntl \
