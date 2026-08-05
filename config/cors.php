@@ -19,8 +19,7 @@ return [
         'http://localhost:*',
         'http://127.0.0.1',
         'http://127.0.0.1:*',
-        // Flutter web production domain — add yours here
-        // 'https://your-flutter-web-app.netlify.app',
+        'https://saning-code.github.io',
         env('FRONTEND_URL', '*'),
     ],
 
