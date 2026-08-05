@@ -40,6 +40,8 @@ RUN docker-php-ext-configure gd --with-jpeg --with-webp \
         xml \
         intl \
         zip \
+        fileinfo \
+        dom \
         opcache
 
 # Install Composer
@@ -59,7 +61,8 @@ RUN composer install \
     --no-scripts \
     --no-autoloader \
     --prefer-dist \
-    --no-interaction
+    --no-interaction \
+    --ignore-platform-reqs
 
 # Copy application source
 COPY . .
