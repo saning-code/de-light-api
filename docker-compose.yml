@@ -1,0 +1,107 @@
+version: '3.8'
+
+# ─────────────────────────────────────────────────────────────────────────────
+# De-Light API — Local Development with Docker
+# Run: docker-compose up -d
+# API available at: http://localhost:8000
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+
+  # ── Laravel API ──────────────────────────────────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: delight_api
+    restart: unless-stopped
+    ports:
+      - "8000:80"
+    environment:
+      APP_NAME: "De-Light"
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_URL: http://localhost:8000
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: delight
+      DB_USERNAME: delight
+      DB_PASSWORD: delight_secret
+      CACHE_STORE: redis
+      SESSION_DRIVER: redis
+      QUEUE_CONNECTION: redis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_SECRET: local_dev_jwt_secret_change_in_production
+      JWT_TTL: 1440
+    volumes:
+      - ./storage:/var/www/html/storage
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - delight_network
+
+  # ── MySQL ─────────────────────────────────────────────────────────────────
+  mysql:
+    image: mysql:8.0
+    container_name: delight_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: delight
+      MYSQL_USER: delight
+      MYSQL_PASSWORD: delight_secret
+      MYSQL_ROOT_PASSWORD: root_secret
+    volumes:
+      - mysql_data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - delight_network
+
+  # ── Redis ─────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: delight_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - delight_network
+
+  # ── phpMyAdmin (database UI for development) ──────────────────────────────
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: delight_phpmyadmin
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    environment:
+      PMA_HOST: mysql
+      PMA_USER: delight
+      PMA_PASSWORD: delight_secret
+    depends_on:
+      - mysql
+    networks:
+      - delight_network
+
+volumes:
+  mysql_data:
+
+networks:
+  delight_network:
+    driver: bridge
