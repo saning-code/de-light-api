@@ -45,7 +45,7 @@ jobs:
         run: php artisan jwt:secret --force
 
       - name: Validate routes load correctly
-        run: php artisan route:list --compact
+        run: php artisan route:list
 
       - name: Run migrations on SQLite (quick validate)
         run: |
