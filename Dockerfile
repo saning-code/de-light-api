@@ -22,6 +22,7 @@ RUN apk add --no-cache \
     mysql-client \
     postgresql-client \
     libpq-dev \
+    libzip-dev \
     bash
 
 # PHP extensions
@@ -38,6 +39,7 @@ RUN docker-php-ext-configure gd --with-jpeg --with-webp \
         gd \
         xml \
         intl \
+        zip \
         opcache
 
 # Install Composer
