@@ -12,6 +12,11 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Exclude admin login from CSRF verification
+        $middleware->validateCsrfTokens(except: [
+            'api/admin/login',
+            'api/*',
+        ]);
         $middleware->alias([
             'super_admin' => \App\Http\Middleware\SuperAdminAuth::class,
         ]);
