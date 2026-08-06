@@ -56,7 +56,8 @@ WORKDIR /var/www/html
 COPY composer.json composer.lock ./
 
 # Install PHP deps without dev packages
-RUN composer install \
+RUN composer remove spatie/laravel-permission --no-update --no-interaction 2>/dev/null || true \
+    && composer install \
     --no-dev \
     --no-scripts \
     --no-autoloader \

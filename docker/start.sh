@@ -78,6 +78,7 @@ php artisan db:seed --force || echo "⚠️  Seeding skipped or already done"
 
 # Cache everything for performance
 echo "⚙️  Caching config, routes, views..."
+php artisan package:discover --ansi
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache

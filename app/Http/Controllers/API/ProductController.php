@@ -116,13 +116,18 @@ class ProductController extends Controller
 
         // Record opening stock movement if quantity > 0
         if ($product->quantity > 0) {
-            $this->inventoryService->adjustStock(
-                product: $product,
-                newQuantity: $product->quantity,
-                userId: $user->id,
-                type: 'opening',
-                note: 'Opening stock',
-            );
+            try {
+                $this->inventoryService->adjustStock(
+                    product: $product,
+                    newQuantity: $product->quantity,
+                    userId: $user->id,
+                    type: 'opening',
+                    note: 'Opening stock',
+                );
+            } catch (\Exception $e) {
+                // Stock movement failed — product still created successfully
+                \Log::warning('Opening stock movement failed: ' . $e->getMessage());
+            }
         }
 
         return $this->successResponse(
