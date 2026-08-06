@@ -8,6 +8,8 @@ use App\Http\Controllers\API\ReportController;
 use App\Http\Controllers\API\SyncController;
 use App\Http\Controllers\Admin\AdminController;
 
+use App\Http\Controllers\API\UserController;
+
 /*
 |--------------------------------------------------------------------------
 | API Routes — De-Light Smart Business Manager (SaaS)
@@ -68,6 +70,14 @@ Route::prefix('v1')->group(function () {
             Route::post('/push',  [SyncController::class, 'push']);
             Route::get('/pull',   [SyncController::class, 'pull']);
             Route::get('/status', [SyncController::class, 'status']);
+        });
+
+        // User Management
+        Route::prefix('users')->group(function () {
+            Route::get('/',          [UserController::class, 'index']);
+            Route::post('/',         [UserController::class, 'store']);
+            Route::put('/{id}',      [UserController::class, 'update']);
+            Route::post('/{id}/toggle', [UserController::class, 'toggle']);
         });
     });
 });
