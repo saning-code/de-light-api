@@ -57,7 +57,7 @@ async function login() {
     if (d.success) {
       localStorage.setItem('admin_token', d.token);
       localStorage.setItem('admin_name', d.name || 'Admin');
-      window.location.href = '/admin/dashboard';
+      window.location.href = '/api/admin/dashboard';
     } else {
       err.textContent = d.message || 'Invalid credentials';
       err.style.display = 'block';
