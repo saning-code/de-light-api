@@ -20,10 +20,11 @@ return [
         'http://127.0.0.1',
         'http://127.0.0.1:*',
         'https://saning-code.github.io',
-        env('FRONTEND_URL', '*'),
+        'https://de-light-api.onrender.com',
+        env('FRONTEND_URL', 'https://de-light-api.onrender.com'),
     ],
 
-    'allowed_origins_patterns' => ['*'],
+    'allowed_origins_patterns' => ['.*'],
 
     'allowed_headers' => ['*'],
 
