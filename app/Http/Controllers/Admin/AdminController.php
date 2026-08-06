@@ -21,7 +21,8 @@ class AdminController extends Controller
 
     public function showLogin()
     {
-        return response(file_get_contents(__DIR__.'/../../../resources/views/admin/login.html'));
+        $file = base_path('resources/views/admin/login.html');
+        return response(file_get_contents($file))->header('Content-Type','text/html');
     }
 
     public function loginJson(Request $request)
@@ -60,8 +61,8 @@ class AdminController extends Controller
 
     public function dashboard(Request $request)
     {
-        $admin = $request->get('super_admin');
-        return response(file_get_contents(__DIR__.'/../../../resources/views/admin/dashboard.html'));
+        $file = base_path('resources/views/admin/dashboard.html');
+        return response(file_get_contents($file))->header('Content-Type','text/html');
     }
 
     // ─── API Endpoints ────────────────────────────────────────────────────────

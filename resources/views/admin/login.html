@@ -48,7 +48,7 @@ async function login() {
   err.style.display = 'none';
   loading.style.display = 'block';
   try {
-    const r = await fetch('/admin/login', {
+    const r = await fetch('/api/admin/login', {
       method: 'POST',
       headers: {'Content-Type':'application/json','Accept':'application/json'},
       body: JSON.stringify({email, password: pw})
