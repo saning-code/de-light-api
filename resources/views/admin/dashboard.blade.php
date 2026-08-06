@@ -111,13 +111,10 @@ body{font-family:'Segoe UI',sans-serif;background:#F1F5F9;color:#0F172A;display:
   </nav>
   <div class="sb-footer">
     <div class="sb-admin">
-      <strong>{{ session('super_admin_name') }}</strong>
+      <strong id="admin-name">{{ $adminName }}</strong>
       Super Admin
     </div>
-    <form method="POST" action="/admin/logout" style="display:inline">
-      @csrf
-      <button type="submit" class="sb-logout" style="background:none;border:none;padding:0">⬅ Sign Out</button>
-    </form>
+    <a href="#" onclick="doLogout()" class="sb-logout">⬅ Sign Out</a>
   </div>
 </div>
 
@@ -254,16 +251,41 @@ body{font-family:'Segoe UI',sans-serif;background:#F1F5F9;color:#0F172A;display:
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
-const CSRF = document.querySelector('meta[name="csrf-token"]').content;
+// Redirect to login if no token
+if (!localStorage.getItem('admin_token')) { window.location.href = '/admin/login'; }
+
+// Show admin name from localStorage
+const savedName = localStorage.getItem('admin_name');
+if (savedName) {
+  const el = document.getElementById('admin-name');
+  if (el) el.textContent = savedName;
+}
+
+function doLogout() {
+  localStorage.removeItem('admin_token');
+  localStorage.removeItem('admin_name');
+  window.location.href = '/admin/login';
+}
+const CSRF = document.querySelector('meta[name="csrf-token"]')?.content || '';
 const BASE = '/admin/api';
 let currentBizPage = 1, activeTenantId = null, chartInstance = null;
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
+function getToken() { return localStorage.getItem('admin_token') || ''; }
+
 function req(url, opts={}) {
   return fetch(url, {
-    headers: { 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json', 'Content-Type': 'application/json', ...opts.headers },
+    headers: {
+      'Authorization': 'Bearer ' + getToken(),
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+      ...opts.headers
+    },
     ...opts
-  }).then(r => r.json());
+  }).then(r => {
+    if (r.status === 401) { window.location.href = '/admin/login'; }
+    return r.json();
+  });
 }
 
 function showAlert(msg, type='success') {

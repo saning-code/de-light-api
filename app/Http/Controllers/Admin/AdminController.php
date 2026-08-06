@@ -12,6 +12,7 @@ use App\Models\SubscriptionPlan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cookie;
 use Carbon\Carbon;
 
 class AdminController extends Controller
@@ -20,46 +21,58 @@ class AdminController extends Controller
 
     public function showLogin()
     {
-        if (session('super_admin_id')) return redirect('/admin/dashboard');
+        // If already has valid token cookie, redirect to dashboard
+        if (request()->cookie('admin_token')) {
+            $admin = SuperAdmin::where('api_token', hash('sha256', request()->cookie('admin_token')))
+                               ->where('is_active', true)->first();
+            if ($admin) return redirect('/admin/dashboard');
+        }
         return view('admin.login');
     }
 
-    public function login(Request $request)
+    public function loginJson(Request $request)
     {
-        $request->validate([
-            'email'    => 'required|email',
-            'password' => 'required|string',
-        ]);
+        $email    = $request->input('email');
+        $password = $request->input('password');
 
-        $admin = SuperAdmin::where('email', $request->email)
-                           ->where('is_active', true)
-                           ->first();
-
-        if (!$admin || !Hash::check($request->password, $admin->password)) {
-            return back()->withErrors(['email' => 'Invalid email or password.']);
+        if (!$email || !$password) {
+            return response()->json(['success' => false, 'message' => 'Email and password required.']);
         }
 
-        session(['super_admin_id' => $admin->id, 'super_admin_name' => $admin->name]);
-        $admin->update(['last_login_at' => now()]);
+        $admin = SuperAdmin::where('email', $email)->where('is_active', true)->first();
 
-        return redirect('/admin/dashboard');
+        if (!$admin || !Hash::check($password, $admin->password)) {
+            return response()->json(['success' => false, 'message' => 'Invalid email or password.']);
+        }
+
+        $token = \Illuminate\Support\Str::random(64);
+        $admin->update(['api_token' => hash('sha256', $token), 'last_login_at' => now()]);
+
+        return response()->json(['success' => true, 'token' => $token, 'name' => $admin->name]);
     }
 
     public function logout()
     {
-        session()->forget(['super_admin_id', 'super_admin_name']);
-        return redirect('/admin/login');
+        $token = request()->cookie('admin_token');
+        if ($token) {
+            SuperAdmin::where('api_token', hash('sha256', $token))
+                      ->update(['api_token' => null]);
+        }
+        return redirect('/admin/login')
+            ->withCookie(Cookie::forget('admin_token'));
     }
 
     // ─── Dashboard ────────────────────────────────────────────────────────────
 
-    public function dashboard()
+    public function dashboard(Request $request)
     {
-        $stats = $this->getPlatformStats();
-        return view('admin.dashboard', compact('stats'));
+        $admin = $request->get('super_admin');
+        return view('admin.dashboard', [
+            'adminName' => $admin ? $admin->name : 'Admin',
+        ]);
     }
 
-    // ─── API Endpoints (called by dashboard via AJAX) ─────────────────────────
+    // ─── API Endpoints ────────────────────────────────────────────────────────
 
     public function apiStats()
     {
@@ -68,7 +81,7 @@ class AdminController extends Controller
 
     public function apiTenants(Request $request)
     {
-        $query = Tenant::with(['subscriptionPlan', 'shops'])
+        $query = Tenant::with(['subscriptionPlan'])
                        ->withCount(['users', 'shops']);
 
         if ($request->search) {
@@ -101,20 +114,13 @@ class AdminController extends Controller
                         ->withCount(['users', 'shops'])
                         ->findOrFail($id);
 
-        // Sales stats for this tenant
-        $salesTotal = Sale::where('tenant_id', $id)
-                          ->where('status', 'completed')
-                          ->sum('total');
-
-        $salesCount = Sale::where('tenant_id', $id)
-                          ->where('status', 'completed')
-                          ->count();
-
+        $salesTotal  = Sale::where('tenant_id', $id)->where('status', 'completed')->sum('total');
+        $salesCount  = Sale::where('tenant_id', $id)->where('status', 'completed')->count();
         $productsCount = Product::where('tenant_id', $id)->count();
 
         return response()->json([
             'tenant'         => $tenant,
-            'sales_total'    => round($salesTotal, 2),
+            'sales_total'    => round((float)$salesTotal, 2),
             'sales_count'    => $salesCount,
             'products_count' => $productsCount,
         ]);
@@ -124,143 +130,86 @@ class AdminController extends Controller
     {
         $tenant = Tenant::findOrFail($id);
         $tenant->update(['status' => 'suspended']);
-
-        // Deactivate all users of this tenant
         User::where('tenant_id', $id)->update(['is_active' => false]);
-
-        return response()->json([
-            'success' => true,
-            'message' => "{$tenant->business_name} has been suspended.",
-        ]);
+        return response()->json(['success' => true, 'message' => "{$tenant->business_name} suspended."]);
     }
 
     public function apiActivateTenant($id)
     {
         $tenant = Tenant::findOrFail($id);
         $tenant->update(['status' => 'active']);
-
-        // Reactivate all users
         User::where('tenant_id', $id)->update(['is_active' => true]);
-
-        return response()->json([
-            'success' => true,
-            'message' => "{$tenant->business_name} has been activated.",
-        ]);
+        return response()->json(['success' => true, 'message' => "{$tenant->business_name} activated."]);
     }
 
     public function apiExtendTrial($id, Request $request)
     {
         $tenant = Tenant::findOrFail($id);
-        $days = $request->days ?? 14;
-
-        $tenant->update([
-            'trial_ends_at' => Carbon::now()->addDays($days),
-            'status'        => 'trial',
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'message' => "Trial extended by {$days} days for {$tenant->business_name}.",
-        ]);
+        $days = (int)($request->days ?? 14);
+        $tenant->update(['trial_ends_at' => Carbon::now()->addDays($days), 'status' => 'trial']);
+        return response()->json(['success' => true, 'message' => "Trial extended by {$days} days."]);
     }
 
     public function apiDeleteTenant($id)
     {
         $tenant = Tenant::findOrFail($id);
         $name = $tenant->business_name;
-
-        // Soft cascade — deactivate everything
         User::where('tenant_id', $id)->update(['is_active' => false]);
         $tenant->delete();
-
-        return response()->json([
-            'success' => true,
-            'message' => "{$name} has been deleted.",
-        ]);
+        return response()->json(['success' => true, 'message' => "{$name} deleted."]);
     }
 
     public function apiPlans()
     {
-        $plans = SubscriptionPlan::withCount('tenants')->get();
-        return response()->json(['data' => $plans]);
+        return response()->json(['data' => SubscriptionPlan::withCount('tenants')->get()]);
     }
 
     public function apiUpdatePlan(Request $request, $id)
     {
         $plan = SubscriptionPlan::findOrFail($id);
         $plan->update($request->only(['name', 'price', 'max_users', 'max_products', 'trial_days']));
-
         return response()->json(['success' => true, 'message' => 'Plan updated.', 'data' => $plan]);
     }
 
     public function apiRecentSignups()
     {
-        $tenants = Tenant::with('subscriptionPlan')
-                         ->latest()
-                         ->limit(10)
-                         ->get();
-
-        return response()->json(['data' => $tenants]);
+        return response()->json([
+            'data' => Tenant::with('subscriptionPlan')->latest()->limit(10)->get()
+        ]);
     }
 
     public function apiChartData()
     {
-        // Signups per day — last 30 days
         $signups = Tenant::selectRaw("DATE(created_at) as date, COUNT(*) as count")
                          ->where('created_at', '>=', now()->subDays(30))
-                         ->groupBy('date')
-                         ->orderBy('date')
-                         ->get();
+                         ->groupBy('date')->orderBy('date')->get();
 
-        // Revenue per day (sum of all sales across all tenants)
         $revenue = Sale::selectRaw("DATE(created_at) as date, SUM(total) as total")
                        ->where('status', 'completed')
                        ->where('created_at', '>=', now()->subDays(30))
-                       ->groupBy('date')
-                       ->orderBy('date')
-                       ->get();
+                       ->groupBy('date')->orderBy('date')->get();
 
-        return response()->json([
-            'signups' => $signups,
-            'revenue' => $revenue,
-        ]);
+        return response()->json(['signups' => $signups, 'revenue' => $revenue]);
     }
 
-    // ─── Private Helpers ─────────────────────────────────────────────────────
+    // ─── Private Helpers ──────────────────────────────────────────────────────
 
     private function getPlatformStats(): array
     {
-        $totalTenants    = Tenant::count();
-        $activeTenants   = Tenant::where('status', 'active')->count();
-        $trialTenants    = Tenant::where('status', 'trial')->count();
-        $suspendedTenants= Tenant::where('status', 'suspended')->count();
-        $totalUsers      = User::count();
-        $totalSales      = Sale::where('status', 'completed')->count();
-        $totalRevenue    = Sale::where('status', 'completed')->sum('total');
-        $totalProducts   = Product::count();
-
-        // New signups this month
-        $newThisMonth = Tenant::whereMonth('created_at', now()->month)
-                              ->whereYear('created_at', now()->year)
-                              ->count();
-
-        // Tenants expiring trial in 3 days
-        $trialExpiringSoon = Tenant::where('status', 'trial')
-                                   ->where('trial_ends_at', '<=', now()->addDays(3))
-                                   ->where('trial_ends_at', '>=', now())
-                                   ->count();
-
         return [
-            'total_tenants'       => $totalTenants,
-            'active_tenants'      => $activeTenants,
-            'trial_tenants'       => $trialTenants,
-            'suspended_tenants'   => $suspendedTenants,
-            'total_users'         => $totalUsers,
-            'total_sales'         => $totalSales,
-            'total_revenue'       => round((float)$totalRevenue, 2),
-            'total_products'      => $totalProducts,
-            'new_this_month'      => $newThisMonth,
-            'trial_expiring_soon' => $trialExpiringSoon,
+            'total_tenants'       => Tenant::count(),
+            'active_tenants'      => Tenant::where('status', 'active')->count(),
+            'trial_tenants'       => Tenant::where('status', 'trial')->count(),
+            'suspended_tenants'   => Tenant::where('status', 'suspended')->count(),
+            'total_users'         => User::count(),
+            'total_sales'         => Sale::where('status', 'completed')->count(),
+            'total_revenue'       => round((float)Sale::where('status', 'completed')->sum('total'), 2),
+            'total_products'      => Product::count(),
+            'new_this_month'      => Tenant::whereMonth('created_at', now()->month)
+                                           ->whereYear('created_at', now()->year)->count(),
+            'trial_expiring_soon' => Tenant::where('status', 'trial')
+                                           ->where('trial_ends_at', '<=', now()->addDays(3))
+                                           ->where('trial_ends_at', '>=', now())->count(),
         ];
     }
 }

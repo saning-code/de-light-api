@@ -14,13 +14,14 @@
   .logo p{color:#64748B;font-size:13px;margin-top:4px}
   .badge{background:#EF4444;color:white;font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;margin-left:6px;vertical-align:middle}
   label{display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:6px}
-  input{width:100%;padding:13px 16px;border:1.5px solid #E5E7EB;border-radius:12px;font-size:14px;outline:none;transition:border 0.2s;color:#0F172A}
+  input{width:100%;padding:13px 16px;border:1.5px solid #E5E7EB;border-radius:12px;font-size:14px;outline:none;color:#0F172A}
   input:focus{border-color:#3B82F6;box-shadow:0 0 0 3px rgba(59,130,246,0.1)}
   .form-group{margin-bottom:18px}
   .error{background:#FEF2F2;border:1px solid #FECACA;color:#DC2626;padding:12px;border-radius:10px;font-size:13px;margin-bottom:16px}
-  btn{display:block;width:100%;padding:14px;background:linear-gradient(135deg,#1E3A8A,#3B82F6);color:white;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;margin-top:8px;transition:opacity 0.2s}
+  .btn{display:block;width:100%;padding:14px;background:linear-gradient(135deg,#1E3A8A,#3B82F6);color:white;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;margin-top:8px}
   .btn:hover{opacity:0.9}
   .hint{text-align:center;color:#94A3B8;font-size:12px;margin-top:20px}
+  #loading{display:none;text-align:center;padding:10px;color:#3B82F6;font-size:13px}
 </style>
 </head>
 <body>
@@ -31,24 +32,59 @@
     <p>SaaS Platform Control Panel</p>
   </div>
 
-  @if($errors->any())
-  <div class="error">{{ $errors->first() }}</div>
-  @endif
+  <div id="error-box" class="error" style="display:none"></div>
 
-  <form method="POST" action="/admin/login">
-    @csrf
-    <div class="form-group">
-      <label>Email Address</label>
-      <input type="email" name="email" value="{{ old('email') }}" placeholder="admin@delight.app" required autofocus>
-    </div>
-    <div class="form-group">
-      <label>Password</label>
-      <input type="password" name="password" placeholder="••••••••••••" required>
-    </div>
-    <button type="submit" class="btn">Sign In to Admin Panel</button>
-  </form>
+  <div class="form-group">
+    <label>Email Address</label>
+    <input type="email" id="email" placeholder="admin@delight.app" value="admin@delight.app" autofocus>
+  </div>
+  <div class="form-group">
+    <label>Password</label>
+    <input type="password" id="password" placeholder="••••••••••••">
+  </div>
+  <button class="btn" onclick="doLogin()">Sign In to Admin Panel</button>
+  <div id="loading">Signing in...</div>
 
   <p class="hint">🔒 Restricted access — authorized personnel only</p>
 </div>
+
+<script>
+async function doLogin() {
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+  const errBox = document.getElementById('error-box');
+  const loading = document.getElementById('loading');
+
+  errBox.style.display = 'none';
+  loading.style.display = 'block';
+
+  try {
+    const r = await fetch('/admin/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await r.json();
+    if (data.success) {
+      // Store token in localStorage
+      localStorage.setItem('admin_token', data.token);
+      localStorage.setItem('admin_name', data.name || 'Admin');
+      window.location.href = '/admin/dashboard';
+    } else {
+      errBox.textContent = data.message || 'Invalid credentials';
+      errBox.style.display = 'block';
+      loading.style.display = 'none';
+    }
+  } catch(e) {
+    errBox.textContent = 'Connection error. Please try again.';
+    errBox.style.display = 'block';
+    loading.style.display = 'none';
+  }
+}
+
+document.getElementById('password').addEventListener('keypress', e => {
+  if (e.key === 'Enter') doLogin();
+});
+</script>
 </body>
 </html>
