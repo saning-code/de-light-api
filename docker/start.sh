@@ -76,12 +76,19 @@ php artisan migrate --force
 echo "⚙️  Seeding database..."
 php artisan db:seed --force || echo "⚠️  Seeding skipped or already done"
 
+# Clear all stale caches first
+echo "⚙️  Clearing stale caches..."
+php artisan config:clear 2>/dev/null || true
+php artisan route:clear 2>/dev/null || true
+php artisan view:clear 2>/dev/null || true
+php artisan cache:clear 2>/dev/null || true
+php artisan optimize:clear 2>/dev/null || true
+
 # Cache everything for performance
 echo "⚙️  Caching config, routes, views..."
 php artisan package:discover --ansi
 php artisan config:cache
 php artisan route:cache
-php artisan view:cache
 php artisan optimize
 
 # Fix storage permissions
