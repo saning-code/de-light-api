@@ -12,6 +12,7 @@ use App\Models\Product;
 use App\Models\Customer;
 use App\Models\SuperAdmin;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
 class DatabaseSeeder extends Seeder
@@ -19,372 +20,239 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         // ─── 0. Super Admin ───────────────────────────────────────────────────
-        SuperAdmin::firstOrCreate(
-            ['email' => 'admin@delight.app'],
-            [
-                'name'      => 'De-Light Super Admin',
-                'password'  => Hash::make('DeLight@Admin2024!'),
-                'role'      => 'super_admin',
-                'is_active' => true,
-            ]
-        );
+        try {
+            SuperAdmin::updateOrCreate(
+                ['email' => 'admin@delight.app'],
+                [
+                    'name'      => 'De-Light Super Admin',
+                    'password'  => Hash::make('DeLight@Admin2024!'),
+                    'role'      => 'super_admin',
+                    'is_active' => true,
+                ]
+            );
+            echo "✅ Super admin seeded\n";
+        } catch (\Exception $e) { echo "⚠️ Super admin: {$e->getMessage()}\n"; }
 
         // ─── 1. Subscription Plans ────────────────────────────────────────────
-        $basic = SubscriptionPlan::firstOrCreate(
-            ['slug' => 'basic'],
-            [
-                'name'                => 'Basic Shop',
-                'slug'                => 'basic',
-                'description'         => 'Perfect for small single-store businesses.',
-                'price'               => 150.00,
-                'billing_cycle'       => 'monthly',
-                'max_shops'           => 1,
-                'max_users'           => 3,
-                'max_products'        => 1000,
-                'has_reports'         => true,
-                'has_barcode'         => true,
-                'has_bluetooth_print' => true,
-                'has_cloud_backup'    => true,
-                'has_multi_shop'      => false,
-                'trial_days'          => 14,
-            ]
-        );
+        try {
+            $basic = SubscriptionPlan::updateOrCreate(
+                ['slug' => 'basic'],
+                [
+                    'name'                => 'Basic Shop',
+                    'description'         => 'Perfect for small single-store businesses.',
+                    'price'               => 150.00,
+                    'billing_cycle'       => 'monthly',
+                    'max_shops'           => 1,
+                    'max_users'           => 3,
+                    'max_products'        => 1000,
+                    'has_reports'         => true,
+                    'has_barcode'         => true,
+                    'has_bluetooth_print' => true,
+                    'has_cloud_backup'    => true,
+                    'has_multi_shop'      => false,
+                    'trial_days'          => 14,
+                ]
+            );
 
-        SubscriptionPlan::firstOrCreate(
-            ['slug' => 'premium'],
-            [
-                'name'                => 'Enterprise Multi-Shop',
-                'slug'                => 'premium',
-                'description'         => 'For growing businesses with multiple locations.',
-                'price'               => 350.00,
-                'billing_cycle'       => 'monthly',
-                'max_shops'           => 10,
-                'max_users'           => 20,
-                'max_products'        => 50000,
-                'has_reports'         => true,
-                'has_barcode'         => true,
-                'has_bluetooth_print' => true,
-                'has_cloud_backup'    => true,
-                'has_multi_shop'      => true,
-                'trial_days'          => 14,
-            ]
-        );
+            SubscriptionPlan::updateOrCreate(
+                ['slug' => 'premium'],
+                [
+                    'name'                => 'Enterprise Multi-Shop',
+                    'description'         => 'For growing businesses with multiple locations.',
+                    'price'               => 350.00,
+                    'billing_cycle'       => 'monthly',
+                    'max_shops'           => 10,
+                    'max_users'           => 20,
+                    'max_products'        => 50000,
+                    'has_reports'         => true,
+                    'has_barcode'         => true,
+                    'has_bluetooth_print' => true,
+                    'has_cloud_backup'    => true,
+                    'has_multi_shop'      => true,
+                    'trial_days'          => 14,
+                ]
+            );
+            echo "✅ Plans seeded\n";
+        } catch (\Exception $e) { echo "⚠️ Plans: {$e->getMessage()}\n"; }
 
         // ─── 2. Demo Tenant ───────────────────────────────────────────────────
-        $tenant = Tenant::firstOrCreate(
-            ['owner_email' => 'kwame@delight.com'],
-            [
-                'business_name'        => 'De-Light Drinks & Provisions Store',
-                'business_code'        => 'DL-GH001',
-                'business_type'        => 'provisions',
-                'owner_name'           => 'Kwame Mensah',
-                'owner_email'          => 'kwame@delight.com',
-                'owner_phone'          => '0244123456',
-                'city'                 => 'Accra',
-                'region'               => 'Greater Accra',
-                'status'               => 'active',
-                'subscription_plan_id' => $basic->id,
-                'currency'             => 'GHS',
-                'currency_symbol'      => '₵',
-                'trial_ends_at'        => Carbon::now()->addDays(14),
-            ]
-        );
+        try {
+            $basic = SubscriptionPlan::where('slug', 'basic')->first();
+            $tenant = Tenant::updateOrCreate(
+                ['owner_email' => 'kwame@delight.com'],
+                [
+                    'business_name'        => 'De-Light Drinks & Provisions Store',
+                    'business_type'        => 'provisions',
+                    'owner_name'           => 'Kwame Mensah',
+                    'owner_phone'          => '0244123456',
+                    'city'                 => 'Accra',
+                    'region'               => 'Greater Accra',
+                    'status'               => 'active',
+                    'subscription_plan_id' => $basic?->id,
+                    'currency'             => 'GHS',
+                    'currency_symbol'      => 'GH₵',
+                    'trial_ends_at'        => Carbon::now()->addDays(30),
+                ]
+            );
+            echo "✅ Tenant seeded: {$tenant->business_name} (ID: {$tenant->id})\n";
+        } catch (\Exception $e) {
+            echo "⚠️ Tenant: {$e->getMessage()}\n";
+            return; // Can't continue without tenant
+        }
 
         // ─── 3. Demo Shop ─────────────────────────────────────────────────────
-        $shop = Shop::firstOrCreate(
-            ['tenant_id' => $tenant->id, 'is_primary' => true],
-            [
-                'tenant_id'   => $tenant->id,
-                'name'        => 'De-Light Main Store (Osu)',
-                'type'        => 'provisions',
-                'phone'       => '0244123456',
-                'address'     => 'Osu Oxford Street, Accra',
-                'city'        => 'Accra',
-                'is_primary'  => true,
-                'is_active'   => true,
-            ]
-        );
+        try {
+            $shop = Shop::updateOrCreate(
+                ['tenant_id' => $tenant->id, 'is_primary' => true],
+                [
+                    'tenant_id'  => $tenant->id,
+                    'name'       => 'De-Light Main Store (Osu)',
+                    'type'       => 'provisions',
+                    'phone'      => '0244123456',
+                    'address'    => 'Osu Oxford Street, Accra',
+                    'city'       => 'Accra',
+                    'is_primary' => true,
+                    'is_active'  => true,
+                ]
+            );
+            echo "✅ Shop seeded: {$shop->name} (ID: {$shop->id})\n";
+        } catch (\Exception $e) {
+            echo "⚠️ Shop: {$e->getMessage()}\n";
+            $shop = Shop::where('tenant_id', $tenant->id)->first();
+            if (!$shop) return;
+        }
 
         // ─── 4. Users ─────────────────────────────────────────────────────────
-        User::firstOrCreate(
-            ['email' => 'owner@delight.com'],
-            [
-                'tenant_id'            => $tenant->id,
-                'shop_id'              => $shop->id,
-                'name'                 => 'Kwame Mensah',
-                'email'                => 'owner@delight.com',
-                'phone'                => '0244123456',
-                'password'             => Hash::make('password123'),
-                'pin'                  => Hash::make('1234'),
-                'role'                 => 'owner',
-                'can_give_discount'    => true,
-                'max_discount_percent' => 100,
-                'can_delete_sale'      => true,
-                'can_view_reports'     => true,
-                'can_manage_products'  => true,
-                'can_manage_users'     => true,
-                'can_view_cost_price'  => true,
-                'is_active'            => true,
-            ]
-        );
+        try {
+            User::updateOrCreate(
+                ['email' => 'owner@delight.com'],
+                [
+                    'tenant_id'            => $tenant->id,
+                    'shop_id'              => $shop->id,
+                    'name'                 => 'Kwame Mensah',
+                    'phone'                => '0244123456',
+                    'password'             => Hash::make('password123'),
+                    'pin'                  => Hash::make('1234'),
+                    'role'                 => 'owner',
+                    'can_give_discount'    => true,
+                    'max_discount_percent' => 100,
+                    'can_delete_sale'      => true,
+                    'can_view_reports'     => true,
+                    'can_manage_products'  => true,
+                    'can_manage_users'     => true,
+                    'can_view_cost_price'  => true,
+                    'is_active'            => true,
+                ]
+            );
+            echo "✅ Owner user seeded\n";
+        } catch (\Exception $e) { echo "⚠️ Owner user: {$e->getMessage()}\n"; }
 
-        User::firstOrCreate(
-            ['email' => 'cashier@delight.com'],
-            [
-                'tenant_id'            => $tenant->id,
-                'shop_id'              => $shop->id,
-                'name'                 => 'Ama Serwaa',
-                'email'                => 'cashier@delight.com',
-                'phone'                => '0555987654',
-                'password'             => Hash::make('password123'),
-                'pin'                  => Hash::make('5678'),
-                'role'                 => 'cashier',
-                'can_give_discount'    => true,
-                'max_discount_percent' => 10,
-                'can_delete_sale'      => false,
-                'can_view_reports'     => false,
-                'can_manage_products'  => true,
-                'can_manage_users'     => false,
-                'can_view_cost_price'  => false,
-                'is_active'            => true,
-            ]
-        );
+        try {
+            User::updateOrCreate(
+                ['email' => 'cashier@delight.com'],
+                [
+                    'tenant_id'            => $tenant->id,
+                    'shop_id'              => $shop->id,
+                    'name'                 => 'Ama Serwaa',
+                    'phone'                => '0555987654',
+                    'password'             => Hash::make('password123'),
+                    'pin'                  => Hash::make('5678'),
+                    'role'                 => 'cashier',
+                    'can_give_discount'    => true,
+                    'max_discount_percent' => 10,
+                    'can_delete_sale'      => false,
+                    'can_view_reports'     => false,
+                    'can_manage_products'  => true,
+                    'can_manage_users'     => false,
+                    'can_view_cost_price'  => false,
+                    'is_active'            => true,
+                ]
+            );
+            echo "✅ Cashier user seeded\n";
+        } catch (\Exception $e) { echo "⚠️ Cashier user: {$e->getMessage()}\n"; }
 
         // ─── 5. Categories ────────────────────────────────────────────────────
-        $catDrinks = Category::firstOrCreate(
-            ['tenant_id' => $tenant->id, 'name' => 'Soft Drinks & Juices'],
-            ['shop_id' => $shop->id, 'color' => '#2563EB', 'icon' => 'local_drink']
-        );
-        $catBeer = Category::firstOrCreate(
-            ['tenant_id' => $tenant->id, 'name' => 'Beers & Stout'],
-            ['shop_id' => $shop->id, 'color' => '#D97706', 'icon' => 'sports_bar']
-        );
-        $catProvisions = Category::firstOrCreate(
-            ['tenant_id' => $tenant->id, 'name' => 'Rice & Grains'],
-            ['shop_id' => $shop->id, 'color' => '#059669', 'icon' => 'shopping_bag']
-        );
-        $catOil = Category::firstOrCreate(
-            ['tenant_id' => $tenant->id, 'name' => 'Cooking Oils'],
-            ['shop_id' => $shop->id, 'color' => '#7C3AED', 'icon' => 'oil_barrel']
-        );
-        $catSnacks = Category::firstOrCreate(
-            ['tenant_id' => $tenant->id, 'name' => 'Snacks & Confectionery'],
-            ['shop_id' => $shop->id, 'color' => '#DB2777', 'icon' => 'cookie']
-        );
-        $catHousehold = Category::firstOrCreate(
-            ['tenant_id' => $tenant->id, 'name' => 'Household & Cleaning'],
-            ['shop_id' => $shop->id, 'color' => '#0891B2', 'icon' => 'cleaning_services']
-        );
-        $catTobacco = Category::firstOrCreate(
-            ['tenant_id' => $tenant->id, 'name' => 'Tobacco & Matches'],
-            ['shop_id' => $shop->id, 'color' => '#64748B', 'icon' => 'smoke_free']
-        );
+        $cats = [];
+        $catData = [
+            'drinks'    => ['Soft Drinks & Juices', '#2563EB', 'local_drink'],
+            'beer'      => ['Beers & Stout', '#D97706', 'sports_bar'],
+            'rice'      => ['Rice & Grains', '#059669', 'shopping_bag'],
+            'oil'       => ['Cooking Oils', '#7C3AED', 'oil_barrel'],
+            'snacks'    => ['Snacks & Confectionery', '#DB2777', 'cookie'],
+            'household' => ['Household & Cleaning', '#0891B2', 'cleaning_services'],
+            'tobacco'   => ['Tobacco & Matches', '#64748B', 'smoke_free'],
+        ];
+
+        foreach ($catData as $key => [$name, $color, $icon]) {
+            try {
+                $cats[$key] = Category::updateOrCreate(
+                    ['tenant_id' => $tenant->id, 'name' => $name],
+                    ['shop_id' => $shop->id, 'color' => $color, 'icon' => $icon]
+                );
+            } catch (\Exception $e) { echo "⚠️ Category {$name}: {$e->getMessage()}\n"; }
+        }
+        echo "✅ Categories seeded: " . count($cats) . "\n";
 
         // ─── 6. Products (15 products) ────────────────────────────────────────
         $products = [
-            // Soft Drinks
-            [
-                'name' => 'Coca Cola 50cl (Crate of 24)',
-                'barcode' => '0544900000099',
-                'unit' => 'crate',
-                'category_id' => $catDrinks->id,
-                'selling_price' => 120.00,
-                'cost_price' => 95.00,
-                'quantity' => 50,
-                'reorder_level' => 10,
-            ],
-            [
-                'name' => 'Maltina Can 33cl (Pack of 24)',
-                'barcode' => '6001050001234',
-                'unit' => 'pack',
-                'category_id' => $catDrinks->id,
-                'selling_price' => 150.00,
-                'cost_price' => 125.00,
-                'quantity' => 30,
-                'reorder_level' => 5,
-            ],
-            [
-                'name' => 'Alvaro Pineapple 330ml (x24)',
-                'barcode' => '5449000024511',
-                'unit' => 'pack',
-                'category_id' => $catDrinks->id,
-                'selling_price' => 135.00,
-                'cost_price' => 108.00,
-                'quantity' => 20,
-                'reorder_level' => 5,
-            ],
-            [
-                'name' => 'Ice Chilled Water 500ml (x24)',
-                'barcode' => '6009696000016',
-                'unit' => 'carton',
-                'category_id' => $catDrinks->id,
-                'selling_price' => 42.00,
-                'cost_price' => 32.00,
-                'quantity' => 60,
-                'reorder_level' => 10,
-            ],
-            // Beers
-            [
-                'name' => 'Club Premium Lager 62cl Bottle',
-                'barcode' => '6001089000112',
-                'unit' => 'bottle',
-                'category_id' => $catBeer->id,
-                'selling_price' => 18.00,
-                'cost_price' => 13.50,
-                'quantity' => 120,
-                'reorder_level' => 24,
-            ],
-            [
-                'name' => 'Guinness Foreign Extra Stout 62cl',
-                'barcode' => '6001089000999',
-                'unit' => 'bottle',
-                'category_id' => $catBeer->id,
-                'selling_price' => 20.00,
-                'cost_price' => 15.00,
-                'quantity' => 80,
-                'reorder_level' => 20,
-            ],
-            [
-                'name' => 'Star Lager Beer 33cl Can',
-                'barcode' => '6001089001001',
-                'unit' => 'can',
-                'category_id' => $catBeer->id,
-                'selling_price' => 12.00,
-                'cost_price' => 9.00,
-                'quantity' => 3,
-                'reorder_level' => 24,
-            ],
-            // Rice & Grains
-            [
-                'name' => 'Royal Aroma Perfumed Rice 5KG',
-                'barcode' => '8935001234567',
-                'unit' => 'bag',
-                'category_id' => $catProvisions->id,
-                'selling_price' => 165.00,
-                'cost_price' => 135.00,
-                'quantity' => 45,
-                'reorder_level' => 8,
-            ],
-            [
-                'name' => 'Abeiku Broken Rice 10KG',
-                'barcode' => '6009696100019',
-                'unit' => 'bag',
-                'category_id' => $catProvisions->id,
-                'selling_price' => 110.00,
-                'cost_price' => 88.00,
-                'quantity' => 22,
-                'reorder_level' => 5,
-            ],
-            // Cooking Oils
-            [
-                'name' => 'Gino Cooking Oil 5 Litres',
-                'barcode' => '6001099887766',
-                'unit' => 'gallon',
-                'category_id' => $catOil->id,
-                'selling_price' => 195.00,
-                'cost_price' => 165.00,
-                'quantity' => 25,
-                'reorder_level' => 5,
-            ],
-            [
-                'name' => 'Frytol Vegetable Oil 1 Litre',
-                'barcode' => '6001099887711',
-                'unit' => 'bottle',
-                'category_id' => $catOil->id,
-                'selling_price' => 42.00,
-                'cost_price' => 34.00,
-                'quantity' => 4,
-                'reorder_level' => 10,
-            ],
-            // Snacks
-            [
-                'name' => 'Pringles Original 165g',
-                'barcode' => '0038000845352',
-                'unit' => 'tin',
-                'category_id' => $catSnacks->id,
-                'selling_price' => 38.00,
-                'cost_price' => 28.00,
-                'quantity' => 36,
-                'reorder_level' => 12,
-            ],
-            [
-                'name' => 'Ideal Milk Tin 400g',
-                'barcode' => '7613035958753',
-                'unit' => 'tin',
-                'category_id' => $catSnacks->id,
-                'selling_price' => 28.00,
-                'cost_price' => 21.00,
-                'quantity' => 48,
-                'reorder_level' => 10,
-            ],
-            // Household
-            [
-                'name' => 'Key Soap Bar (Box of 12)',
-                'barcode' => '6001068000049',
-                'unit' => 'box',
-                'category_id' => $catHousehold->id,
-                'selling_price' => 60.00,
-                'cost_price' => 48.00,
-                'quantity' => 15,
-                'reorder_level' => 5,
-            ],
-            // Tobacco
-            [
-                'name' => 'Supermatch Matchbox (Box of 100)',
-                'barcode' => '6009696200018',
-                'unit' => 'box',
-                'category_id' => $catTobacco->id,
-                'selling_price' => 25.00,
-                'cost_price' => 18.00,
-                'quantity' => 0,
-                'reorder_level' => 5,
-            ],
+            ['name'=>'Coca Cola 50cl (Crate of 24)','barcode'=>'0544900000099','cat'=>'drinks','unit'=>'crate','sell'=>120,'cost'=>95,'qty'=>50,'reorder'=>10],
+            ['name'=>'Maltina Can 33cl (Pack of 24)','barcode'=>'6001050001234','cat'=>'drinks','unit'=>'pack','sell'=>150,'cost'=>125,'qty'=>30,'reorder'=>5],
+            ['name'=>'Alvaro Pineapple 330ml (x24)','barcode'=>'5449000024511','cat'=>'drinks','unit'=>'pack','sell'=>135,'cost'=>108,'qty'=>20,'reorder'=>5],
+            ['name'=>'Ice Chilled Water 500ml (x24)','barcode'=>'6009696000016','cat'=>'drinks','unit'=>'carton','sell'=>42,'cost'=>32,'qty'=>60,'reorder'=>10],
+            ['name'=>'Club Premium Lager 62cl','barcode'=>'6001089000112','cat'=>'beer','unit'=>'bottle','sell'=>18,'cost'=>13.50,'qty'=>120,'reorder'=>24],
+            ['name'=>'Guinness Foreign Extra Stout','barcode'=>'6001089000999','cat'=>'beer','unit'=>'bottle','sell'=>20,'cost'=>15,'qty'=>80,'reorder'=>20],
+            ['name'=>'Star Lager Beer 33cl Can','barcode'=>'6001089001001','cat'=>'beer','unit'=>'can','sell'=>12,'cost'=>9,'qty'=>3,'reorder'=>24],
+            ['name'=>'Royal Aroma Perfumed Rice 5KG','barcode'=>'8935001234567','cat'=>'rice','unit'=>'bag','sell'=>165,'cost'=>135,'qty'=>45,'reorder'=>8],
+            ['name'=>'Abeiku Broken Rice 10KG','barcode'=>'6009696100019','cat'=>'rice','unit'=>'bag','sell'=>110,'cost'=>88,'qty'=>22,'reorder'=>5],
+            ['name'=>'Gino Cooking Oil 5 Litres','barcode'=>'6001099887766','cat'=>'oil','unit'=>'gallon','sell'=>195,'cost'=>165,'qty'=>25,'reorder'=>5],
+            ['name'=>'Frytol Vegetable Oil 1 Litre','barcode'=>'6001099887711','cat'=>'oil','unit'=>'bottle','sell'=>42,'cost'=>34,'qty'=>4,'reorder'=>10],
+            ['name'=>'Pringles Original 165g','barcode'=>'0038000845352','cat'=>'snacks','unit'=>'tin','sell'=>38,'cost'=>28,'qty'=>36,'reorder'=>12],
+            ['name'=>'Ideal Milk Tin 400g','barcode'=>'7613035958753','cat'=>'snacks','unit'=>'tin','sell'=>28,'cost'=>21,'qty'=>48,'reorder'=>10],
+            ['name'=>'Key Soap Bar (Box of 12)','barcode'=>'6001068000049','cat'=>'household','unit'=>'box','sell'=>60,'cost'=>48,'qty'=>15,'reorder'=>5],
+            ['name'=>'Supermatch Matchbox (Box of 100)','barcode'=>'6009696200018','cat'=>'tobacco','unit'=>'box','sell'=>25,'cost'=>18,'qty'=>0,'reorder'=>5],
         ];
 
-        foreach ($products as $pData) {
-            Product::firstOrCreate(
-                [
-                    'tenant_id' => $tenant->id,
-                    'name'      => $pData['name'],
-                ],
-                array_merge($pData, [
-                    'tenant_id'            => $tenant->id,
-                    'shop_id'              => $shop->id,
-                    'track_inventory'      => true,
-                    'allow_negative_stock' => false,
-                    'is_active'            => true,
-                    'tax_rate'             => 0,
-                ])
-            );
+        $seeded = 0;
+        foreach ($products as $p) {
+            try {
+                Product::updateOrCreate(
+                    ['tenant_id' => $tenant->id, 'name' => $p['name']],
+                    [
+                        'tenant_id'       => $tenant->id,
+                        'shop_id'         => $shop->id,
+                        'category_id'     => $cats[$p['cat']]?->id ?? null,
+                        'barcode'         => $p['barcode'],
+                        'unit'            => $p['unit'],
+                        'selling_price'   => $p['sell'],
+                        'cost_price'      => $p['cost'],
+                        'quantity'        => $p['qty'],
+                        'reorder_level'   => $p['reorder'],
+                        'track_inventory' => true,
+                        'is_active'       => true,
+                        'tax_rate'        => 0,
+                    ]
+                );
+                $seeded++;
+            } catch (\Exception $e) { echo "⚠️ Product {$p['name']}: {$e->getMessage()}\n"; }
         }
+        echo "✅ Products seeded: $seeded\n";
 
         // ─── 7. Customers ─────────────────────────────────────────────────────
-        Customer::firstOrCreate(
-            ['tenant_id' => $tenant->id, 'phone' => '0240111222'],
-            [
-                'shop_id'        => $shop->id,
-                'name'           => 'Kofi Kinaata (Wholesale)',
-                'credit_limit'   => 2000.00,
-                'credit_balance' => 350.00,
-            ]
-        );
-        Customer::firstOrCreate(
-            ['tenant_id' => $tenant->id, 'phone' => '0277333444'],
-            [
-                'shop_id'        => $shop->id,
-                'name'           => 'Auntie Mary',
-                'credit_limit'   => 1000.00,
-                'credit_balance' => 0,
-            ]
-        );
-        Customer::firstOrCreate(
-            ['tenant_id' => $tenant->id, 'phone' => '0501234567'],
-            [
-                'shop_id'        => $shop->id,
-                'name'           => 'Ebo Wilson (Regular)',
-                'credit_limit'   => 500.00,
-                'credit_balance' => 0,
-            ]
-        );
+        $customers = [
+            ['phone'=>'0240111222','name'=>'Kofi Kinaata (Wholesale)','limit'=>2000,'balance'=>350],
+            ['phone'=>'0277333444','name'=>'Auntie Mary','limit'=>1000,'balance'=>0],
+            ['phone'=>'0501234567','name'=>'Ebo Wilson (Regular)','limit'=>500,'balance'=>0],
+        ];
+
+        foreach ($customers as $c) {
+            try {
+                Customer::updateOrCreate(
+                    ['tenant_id' => $tenant->id, 'phone' => $c['phone']],
+                    ['shop_id'=>$shop->id,'name'=>$c['name'],'credit_limit'=>$c['limit'],'credit_balance'=>$c['balance']]
+                );
+            } catch (\Exception $e) { echo "⚠️ Customer {$c['name']}: {$e->getMessage()}\n"; }
+        }
+        echo "✅ Customers seeded\n";
+        echo "🎉 Seeder complete!\n";
     }
 }

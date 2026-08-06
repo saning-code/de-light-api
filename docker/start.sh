@@ -74,7 +74,7 @@ php artisan migrate --force
 
 # Seed database (idempotent — uses firstOrCreate)
 echo "⚙️  Seeding database..."
-php artisan db:seed --force || echo "⚠️  Seeding skipped or already done"
+php artisan db:seed --force 2>&1 | tail -20 || echo "⚠️  Some seeds may have failed — continuing"
 
 # Clear all stale caches first
 echo "⚙️  Clearing stale caches..."
