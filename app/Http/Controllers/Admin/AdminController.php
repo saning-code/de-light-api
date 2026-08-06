@@ -21,13 +21,7 @@ class AdminController extends Controller
 
     public function showLogin()
     {
-        // If already has valid token cookie, redirect to dashboard
-        if (request()->cookie('admin_token')) {
-            $admin = SuperAdmin::where('api_token', hash('sha256', request()->cookie('admin_token')))
-                               ->where('is_active', true)->first();
-            if ($admin) return redirect('/admin/dashboard');
-        }
-        return view('admin.login');
+        return response(file_get_contents(__DIR__.'/../../../resources/views/admin/login.html'));
     }
 
     public function loginJson(Request $request)
@@ -67,9 +61,7 @@ class AdminController extends Controller
     public function dashboard(Request $request)
     {
         $admin = $request->get('super_admin');
-        return view('admin.dashboard', [
-            'adminName' => $admin ? $admin->name : 'Admin',
-        ]);
+        return response(file_get_contents(__DIR__.'/../../../resources/views/admin/dashboard.html'));
     }
 
     // ─── API Endpoints ────────────────────────────────────────────────────────
