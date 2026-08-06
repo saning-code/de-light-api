@@ -26,7 +26,6 @@ class ProductController extends Controller
         $query = Product::where('tenant_id', $user->tenant_id)
                         ->where('shop_id', $shopId)
                         ->with('category:id,name,color,icon')
-                        ->withCount(['saleItems as total_sold' => fn ($q) => $q->selectRaw('COALESCE(SUM(quantity), 0)')])
                         ->latest();
 
         if ($request->filled('search'))      { $query->search($request->search); }
