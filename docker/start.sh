@@ -95,6 +95,11 @@ php artisan optimize
 chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
+# Set nginx port from PORT env var (default 80)
+NGINX_PORT="${PORT:-80}"
+echo "⚙️  Configuring nginx to listen on port $NGINX_PORT..."
+sed -i "s/PORT_PLACEHOLDER/$NGINX_PORT/g" /etc/nginx/conf.d/default.conf
+
 echo "✅ De-Light API is ready!"
 
 # Start supervisor (nginx + php-fpm + queue worker)

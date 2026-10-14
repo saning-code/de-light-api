@@ -97,6 +97,7 @@ return [
             'prefix_indexes' => true,
             'search_path' => 'public',
             'sslmode' => env('DB_SSLMODE', 'prefer'),
+            'dsn_options' => env('DB_DSN_OPTIONS', null),
         ],
 
         'sqlsrv' => [

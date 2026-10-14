@@ -20,7 +20,7 @@ return new class extends Migration
             $table->string('email')->nullable();
             $table->string('phone', 20)->nullable();
             $table->string('password');
-            $table->string('pin', 10)->nullable(); // 4-6 digit PIN
+            $table->string('pin')->nullable(); // hashed PIN
             $table->string('role')->default('cashier'); // owner, manager, cashier, salesperson
             $table->string('avatar')->nullable();
             $table->boolean('is_active')->default(true);
