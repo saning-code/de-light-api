@@ -97,7 +97,8 @@ return [
             'prefix_indexes' => true,
             'search_path' => 'public',
             'sslmode' => env('DB_SSLMODE', 'prefer'),
-            'dsn_options' => env('DB_DSN_OPTIONS', null),
+            // Neon requires the endpoint ID in the DSN for SNI support on older libpq
+            'dsn_options' => env('DB_DSN_OPTIONS', env('DB_HOST') ? ('endpoint=' . explode('.', env('DB_HOST', ''))[0]) : null),
         ],
 
         'sqlsrv' => [
